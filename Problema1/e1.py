@@ -64,7 +64,7 @@ def read_data(f: TextIO) -> Data:
 
 
 
-def df(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex, preorder: bool = True) -> list[Edge]:
+def df_demolish(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex, treasure: Vertex, preorder: bool = True) -> list[Edge]:
     def traverse_from(u: Vertex, v: Vertex):
         seen.add(v)
         if preorder:
@@ -83,6 +83,10 @@ def df(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex, preorder: boo
 def process(data: Data) -> Result:
     # TODO: IMPLEMENTAR
     rows, cols, treasure, graph = data
+    df_demolish(graph, (0,0),(rows-1,cols-1), treasure)
+    # idea para mañana: recorrer desde tesoro a rows-1, cols-1 (final) y crear un camino
+    # recorrer desde 0,0  y mirar desde cada vertice la distancia sobre los vertices del camino ya hecho, si = 1 romper pared, entonces acabar recorrido y añadir al camino ya creado lo recorrido desde el inicio+pared rota
+
 
     #raise NotImplementedError('process')  # Quitar
 
