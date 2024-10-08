@@ -51,39 +51,63 @@ def read_data(f: TextIO) -> Data:
     edges = []
     for line in f.readlines():
         x1, y1, x2, y2 = line.split()
-        #vertices.append((int(x1), int(y1)))
-        #vertices.append((int(x2), int(y2)))
-        #edges.append(((int(x2), int(y2))
-        #edges.append(((int(x1), int(y1)), (int(x2), int(y2))))
         edges.append((tuple((int(x1),int(y1))),tuple((int(x2),int(y2)))))
-        #Solucionar lo de la lista de vertices
     return rows, cols, treasure, UndirectedGraph(E=edges)
 
     #raise NotImplementedError('read_data')  # Quitar
 
 
-
-
-def df_demolish(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex, treasure: Vertex, preorder: bool = True) -> list[Edge]:
+def df_fromto(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex, preorder: bool = True) -> tuple[set[Edge], set[Edge]]:
     def traverse_from(u: Vertex, v: Vertex):
+        #para hacer de tesoro a final
+        if target not in seen:
+            resCamino.add((u, v))
         seen.add(v)
         if preorder:
-            res.append((u, v))  # Añadimos una arista (recorrido en preorden)
+            res.add((u, v))  # Añadimos una arista (recorrido en preorden)
         for suc_v in g.succs(v):
             if suc_v not in seen:
                 traverse_from(v, suc_v)
         if not preorder:
-            res.append((u, v))  # Añadimos una arista (recorrido en postorden)
+            res.add((u, v))  # Añadimos una arista (recorrido en postorden)
+    seen: set[Vertex] = set()
+    #usando sets para despues poder hacer diferencias e interseciones
+    res: set[Edge[Vertex]] = set()
+    resCamino: set[Edge[Vertex]] = set()
+    traverse_from(source, source)  # Arista fantasma inicial
+    return res, resCamino
+
+def demolish(g: UndirectedGraph[Vertex], source: Vertex, targetPath: set[Edge]) -> tuple[list[Edge], Edge]:
+    def traverse_from(u: Vertex, v: Vertex):
+        seen.add(v)
+        x, y= v
+        if (x+1, y) in targetPath:
+            return res, tuple(v,((x+1),y))
+            #ARREGLAR ESTO
+        elif (x-1, y) in targetPath:
+        elif (x, y+1) in targetPath:
+        elif (x, y-1) in targetPath:
+        res.append((u, v))  # Añadimos una arista (recorrido en preorden)
+        for suc_v in g.succs(v):
+            if suc_v not in seen:
+                traverse_from(v, suc_v)
+
+
     seen: set[Vertex] = set()
     res: list[Edge[Vertex]] = []
+    resCamino: list[Edge[Vertex]] = []
     traverse_from(source, source)  # Arista fantasma inicial
-    return res
-
+    return res, resCamino
 
 def process(data: Data) -> Result:
     # TODO: IMPLEMENTAR
     rows, cols, treasure, graph = data
-    df_demolish(graph, (0,0),(rows-1,cols-1), treasure)
+    endPos= rows-1, cols-1
+    pathTuple= df_fromto(graph, treasure, endPos)
+    totalPath, idealPath = pathTuple
+    print(totalPath)
+    print(idealPath)
+
     # idea para mañana: recorrer desde tesoro a rows-1, cols-1 (final) y crear un camino
     # recorrer desde 0,0  y mirar desde cada vertice la distancia sobre los vertices del camino ya hecho, si = 1 romper pared, entonces acabar recorrido y añadir al camino ya creado lo recorrido desde el inicio+pared rota
 
@@ -103,6 +127,5 @@ def show_result(result: Result):
 
 if __name__ == '__main__':
     data0 = read_data(sys.stdin)
-    print(data0)
     result0 = process(data0)
     show_result(result0)
