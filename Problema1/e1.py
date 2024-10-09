@@ -57,57 +57,78 @@ def read_data(f: TextIO) -> Data:
     #raise NotImplementedError('read_data')  # Quitar
 
 
-def df_fromto(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex, preorder: bool = True) -> tuple[set[Edge], set[Edge]]:
+def df_fromto(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex) -> tuple[list[Vertex], list[Vertex]]:
     def traverse_from(u: Vertex, v: Vertex):
         #para hacer de tesoro a final
         if target not in seen:
-            resCamino.add((u, v))
+            respath.append(v)
         seen.add(v)
-        if preorder:
-            res.add((u, v))  # Añadimos una arista (recorrido en preorden)
+        res.append(v)  # Añadimos una arista (recorrido en preorden)
         for suc_v in g.succs(v):
             if suc_v not in seen:
                 traverse_from(v, suc_v)
-        if not preorder:
-            res.add((u, v))  # Añadimos una arista (recorrido en postorden)
     seen: set[Vertex] = set()
     #usando sets para despues poder hacer diferencias e interseciones
-    res: set[Edge[Vertex]] = set()
-    resCamino: set[Edge[Vertex]] = set()
+    res: list[Vertex] = list()
+    #res: set[Vertex] = set()
+    respath: list[Vertex] = []
+    #respath: set[Vertex] = set()
     traverse_from(source, source)  # Arista fantasma inicial
-    return res, resCamino
+    return res, respath
 
-def demolish(g: UndirectedGraph[Vertex], source: Vertex, targetPath: set[Edge]) -> tuple[list[Edge], Edge]:
-    def traverse_from(u: Vertex, v: Vertex):
+def demolish(g: UndirectedGraph[Vertex], treasure: Vertex, treasurevgroup: list[Vertex]) -> tuple[list[Vertex], Edge]:
+    def traverse_wall_to_treasure(u: Vertex, v: Vertex):
+        # para hacer de tesoro a final
+        nonlocal wall
+        if treasure not in seen:
+            res.append(v)
         seen.add(v)
-        x, y= v
-        if (x+1, y) in targetPath:
-            return res, tuple(v,((x+1),y))
-            #ARREGLAR ESTO
-        elif (x-1, y) in targetPath:
-        elif (x, y+1) in targetPath:
-        elif (x, y-1) in targetPath:
-        res.append((u, v))  # Añadimos una arista (recorrido en preorden)
+        x, y = v
+        if wall == (initialpos, initialpos):
+            if (x + 1, y) in treasurevgroup:
+                wall = (v,(x + 1, y))
+                g.add_edge(wall)
+                v = wall[1]
+                res.append(v)
+            elif (x - 1, y) in treasurevgroup:
+                wall = (v,(x - 1, y))
+                g.add_edge(wall)
+                v = wall[1]
+                res.append(v)
+            elif (x, y + 1) in treasurevgroup:
+                wall = (v,(x, y + 1))
+                g.add_edge(wall)
+                v = wall[1]
+                res.append(v)
+            elif (x, y - 1) in treasurevgroup:
+                wall = (v,(x, y - 1))
+                g.add_edge(wall)
+                v = wall[1]
+                res.append(v)
+            seen.add(v)
         for suc_v in g.succs(v):
             if suc_v not in seen:
-                traverse_from(v, suc_v)
+                traverse_wall_to_treasure(v, suc_v)
+    initialpos = (0,0)
+    wall: Edge = (initialpos,initialpos)
 
-
+    res: list[Vertex] = []
     seen: set[Vertex] = set()
-    res: list[Edge[Vertex]] = []
-    resCamino: list[Edge[Vertex]] = []
-    traverse_from(source, source)  # Arista fantasma inicial
-    return res, resCamino
+    #res: set[Vertex] = set()
+    traverse_wall_to_treasure(initialpos, initialpos)
+    return res, wall
+
 
 def process(data: Data) -> Result:
     # TODO: IMPLEMENTAR
     rows, cols, treasure, graph = data
-    endPos= rows-1, cols-1
-    pathTuple= df_fromto(graph, treasure, endPos)
-    totalPath, idealPath = pathTuple
-    print(totalPath)
-    print(idealPath)
-
+    endpos = rows-1, cols-1
+    treasurevgroup, idealpath = df_fromto(graph, treasure, endpos)
+    path_hole, wall = demolish(graph, endpos, treasurevgroup)
+    print(idealpath)
+    print(path_hole)
+    #return list(idealpath), wall
+    #cambiar sets a list y devolver lista de vertex, no de edges
     # idea para mañana: recorrer desde tesoro a rows-1, cols-1 (final) y crear un camino
     # recorrer desde 0,0  y mirar desde cada vertice la distancia sobre los vertices del camino ya hecho, si = 1 romper pared, entonces acabar recorrido y añadir al camino ya creado lo recorrido desde el inicio+pared rota
 
