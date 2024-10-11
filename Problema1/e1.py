@@ -7,6 +7,7 @@
 # ==========================================================================================
 
 import sys
+from copy import deepcopy
 from typing import TextIO
 
 # ==========================================================================================
@@ -25,7 +26,6 @@ except:
 
 # Añadid los imports de algoritmia que necesitéis aquí debajo:
 from algoritmia.datastructures.graphs import UndirectedGraph
-
 # ------ Tipos ------
 
 type Vertex = tuple[int, int]
@@ -47,7 +47,6 @@ def read_data(f: TextIO) -> Data:
 
     rows, cols = (int(s) for s in f.readline().split())
     treasure = tuple(int(s) for s in f.readline().split())
-    vertices = []
     edges = []
     for line in f.readlines():
         x1, y1, x2, y2 = line.split()
@@ -57,80 +56,96 @@ def read_data(f: TextIO) -> Data:
     #raise NotImplementedError('read_data')  # Quitar
 
 
-def df_fromto(g: UndirectedGraph[Vertex], source: Vertex, target: Vertex) -> tuple[list[Vertex], list[Vertex]]:
+def df_fromto(g: UndirectedGraph[Vertex], source: Vertex) -> tuple[list[Edge], set[Vertex]]:
     def traverse_from(u: Vertex, v: Vertex):
-        #para hacer de tesoro a final
-        if target not in seen:
-            respath.append(v)
+        #if target not in seen:
+            #respath.append((u, v))
         seen.add(v)
-        res.append(v)  # Añadimos una arista (recorrido en preorden)
+        res.append((u,v))
         for suc_v in g.succs(v):
             if suc_v not in seen:
                 traverse_from(v, suc_v)
     seen: set[Vertex] = set()
-    #usando sets para despues poder hacer diferencias e interseciones
-    res: list[Vertex] = list()
-    #res: set[Vertex] = set()
-    respath: list[Vertex] = []
-    #respath: set[Vertex] = set()
+    res: list[Edge] = list()
     traverse_from(source, source)  # Arista fantasma inicial
-    return res, respath
+    return res, seen
 
-def demolish(g: UndirectedGraph[Vertex], treasure: Vertex, treasurevgroup: list[Vertex]) -> tuple[list[Vertex], Edge]:
-    def traverse_wall_to_treasure(u: Vertex, v: Vertex):
-        # para hacer de tesoro a final
-        nonlocal wall
-        if treasure not in seen:
-            res.append(v)
+
+def wall_list(g: UndirectedGraph[Vertex], treasurevertex: set[Vertex]) -> list[Edge]:
+    def traverse_from(u: Vertex, v: Vertex):
         seen.add(v)
         x, y = v
-        if wall == (initialpos, initialpos):
-            if (x + 1, y) in treasurevgroup:
-                wall = (v,(x + 1, y))
-                g.add_edge(wall)
-                v = wall[1]
-                res.append(v)
-            elif (x - 1, y) in treasurevgroup:
-                wall = (v,(x - 1, y))
-                g.add_edge(wall)
-                v = wall[1]
-                res.append(v)
-            elif (x, y + 1) in treasurevgroup:
-                wall = (v,(x, y + 1))
-                g.add_edge(wall)
-                v = wall[1]
-                res.append(v)
-            elif (x, y - 1) in treasurevgroup:
-                wall = (v,(x, y - 1))
-                g.add_edge(wall)
-                v = wall[1]
-                res.append(v)
-            seen.add(v)
+        if (x + 1, y) in treasurevertex:
+            wall = (v, (x + 1, y))
+            res.append(wall)
+        if (x - 1, y) in treasurevertex:
+            wall = (v, (x - 1, y))
+            res.append(wall)
+        if (x, y + 1) in treasurevertex:
+            wall = (v, (x, y + 1))
+            res.append(wall)
+        if (x, y - 1) in treasurevertex:
+            wall = (v, (x, y - 1))
+            res.append(wall)
         for suc_v in g.succs(v):
             if suc_v not in seen:
-                traverse_wall_to_treasure(v, suc_v)
-    initialpos = (0,0)
-    wall: Edge = (initialpos,initialpos)
-
-    res: list[Vertex] = []
+                traverse_from(v, suc_v)
+    initialpos = (0, 0)
     seen: set[Vertex] = set()
-    #res: set[Vertex] = set()
-    traverse_wall_to_treasure(initialpos, initialpos)
-    return res, wall
+    res: list[Edge] = list()
+    traverse_from(initialpos, initialpos)  # Arista fantasma inicial
+    return res
+
+
+def path_recover(edges: list[Edge], v: Vertex) -> list[Vertex]:
+    # Creates backpointer dictionary (bp)
+    bp: dict[Vertex, Vertex] = {}
+    for o, d in edges:
+        bp[d] = o
+        if d == v: # I have all I need
+            break
+    # Recover the path jumping back
+    path = [v]
+    while v != bp[v]:
+        v = bp[v]
+        path.append(v)
+    # reverse the path
+    path.reverse()
+    return path
+
+#def demolish(g: UndirectedGraph[Vertex], treasure: Vertex, treasurevgroup: list[Vertex]) -> tuple[list[Vertex], Edge]:
+    #def traverse_start_to_treasure(v: Vertex, u: Vertex):
+   # initialpos = (0,0)
+    #wall: Edge = (initialpos,initialpos)
+    #res: list[Vertex] = []
+    #seen: set[Vertex] = set()
+    #traverse_start_to_treasure(initialpos, initialpos)
+    #return res, wall
 
 
 def process(data: Data) -> Result:
     # TODO: IMPLEMENTAR
     rows, cols, treasure, graph = data
     endpos = rows-1, cols-1
-    treasurevgroup, idealpath = df_fromto(graph, treasure, endpos)
-    path_hole, wall = demolish(graph, endpos, treasurevgroup)
-    print(idealpath)
-    print(path_hole)
-    #return list(idealpath), wall
-    #cambiar sets a list y devolver lista de vertex, no de edges
-    # idea para mañana: recorrer desde tesoro a rows-1, cols-1 (final) y crear un camino
-    # recorrer desde 0,0  y mirar desde cada vertice la distancia sobre los vertices del camino ya hecho, si = 1 romper pared, entonces acabar recorrido y añadir al camino ya creado lo recorrido desde el inicio+pared rota
+    treasure_edges, treasurevertex = df_fromto(graph, treasure)
+    minlen=999999999999999999999999999
+    short_edges: list[Edge] = []
+    minwall: Edge
+    for wall in wall_list(graph, treasurevertex):
+        auxgraph=deepcopy(graph)
+        auxgraph.add_edge(wall)
+        start_to_treasure=df_fromto(auxgraph, (0, 0))[0]
+        if len(start_to_treasure) <= minlen:
+            minlen = len(start_to_treasure)
+            short_edges = start_to_treasure
+            minwall = wall
+    graph.add_edge(minwall)
+    finalpath=path_recover(short_edges, treasure)
+    for vertex in path_recover(treasure_edges, endpos):
+        finalpath.append(vertex)
+    finalpath.remove(treasure)
+    return finalpath, minwall
+
 
 
     #raise NotImplementedError('process')  # Quitar
