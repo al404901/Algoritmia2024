@@ -7,7 +7,6 @@
 # ==========================================================================================
 
 import sys
-from copy import deepcopy
 from typing import TextIO
 
 # ==========================================================================================
@@ -26,6 +25,7 @@ except:
 
 # Añadid los imports de algoritmia que necesitéis aquí debajo:
 from algoritmia.datastructures.graphs import UndirectedGraph
+from algoritmia.datastructures.queues import Fifo
 # ------ Tipos ------
 
 type Vertex = tuple[int, int]
@@ -53,102 +53,100 @@ def read_data(f: TextIO) -> Data:
         edges.append((tuple((int(x1),int(y1))),tuple((int(x2),int(y2)))))
     return rows, cols, treasure, UndirectedGraph(E=edges)
 
-    #raise NotImplementedError('read_data')  # Quitar
 
-
-def df_fromto(g: UndirectedGraph[Vertex], source: Vertex) -> tuple[list[Edge], set[Vertex]]:
-    def traverse_from(u: Vertex, v: Vertex):
-        #if target not in seen:
-            #respath.append((u, v))
-        seen.add(v)
-        res.append((u,v))
-        for suc_v in g.succs(v):
-            if suc_v not in seen:
-                traverse_from(v, suc_v)
+def bf_fromtoleft(g: UndirectedGraph[Vertex], source: Vertex, treasurevertex:set[Vertex]) -> tuple[list[Edge], dict[Vertex, Vertex]]:
+    distanceside: dict[Vertex, Vertex] = {}
+    queue: Fifo[Edge] = Fifo()
+    queue.push((source, source))
     seen: set[Vertex] = set()
+    seen.add(source)
     res: list[Edge] = list()
-    traverse_from(source, source)  # Arista fantasma inicial
+    while len(queue) > 0:
+        u, v = queue.pop()
+        res.append((u,v))
+        x, y = v
+        if (x + 1, y) in treasurevertex:
+            distanceside[(x + 1, y)] = (v)
+        if (x, y + 1) in treasurevertex:
+            distanceside[(x, y + 1)] = (v)
+        if (x, y - 1) in treasurevertex:
+            distanceside[(x, y - 1)] = (v)
+        for suc in g.succs(v):
+            if suc not in seen:
+                queue.push((v, suc))
+                seen.add(suc)
+    return res, distanceside
+
+
+def bf_fromtoright(g: UndirectedGraph[Vertex], source: Vertex) -> tuple[list[Edge], set[Vertex]]:
+    queue: Fifo[Edge] = Fifo()
+    queue.push((source, source))
+    seen: set[Vertex] = set()
+    seen.add(source)
+    res: list[Edge] = list()
+    while len(queue) > 0:
+        u, v = queue.pop()
+        res.append((u,v))
+        for suc in g.succs(v):
+            if suc not in seen:
+                queue.push((v, suc))
+                seen.add(suc)
     return res, seen
 
 
-def wall_list(g: UndirectedGraph[Vertex], treasurevertex: set[Vertex]) -> list[Edge]:
-    def traverse_from(u: Vertex, v: Vertex):
-        seen.add(v)
-        x, y = v
-        if (x + 1, y) in treasurevertex:
-            wall = (v, (x + 1, y))
-            res.append(wall)
-        if (x - 1, y) in treasurevertex:
-            wall = (v, (x - 1, y))
-            res.append(wall)
-        if (x, y + 1) in treasurevertex:
-            wall = (v, (x, y + 1))
-            res.append(wall)
-        if (x, y - 1) in treasurevertex:
-            wall = (v, (x, y - 1))
-            res.append(wall)
-        for suc_v in g.succs(v):
-            if suc_v not in seen:
-                traverse_from(v, suc_v)
-    initialpos = (0, 0)
-    seen: set[Vertex] = set()
-    res: list[Edge] = list()
-    traverse_from(initialpos, initialpos)  # Arista fantasma inicial
-    return res
-
-
 def path_recover(edges: list[Edge], v: Vertex) -> list[Vertex]:
-    # Creates backpointer dictionary (bp)
     bp: dict[Vertex, Vertex] = {}
     for o, d in edges:
         bp[d] = o
-        if d == v: # I have all I need
+        if d == v:
             break
-    # Recover the path jumping back
     path = [v]
     while v != bp[v]:
         v = bp[v]
         path.append(v)
-    # reverse the path
     path.reverse()
     return path
 
-#def demolish(g: UndirectedGraph[Vertex], treasure: Vertex, treasurevgroup: list[Vertex]) -> tuple[list[Vertex], Edge]:
-    #def traverse_start_to_treasure(v: Vertex, u: Vertex):
-   # initialpos = (0,0)
-    #wall: Edge = (initialpos,initialpos)
-    #res: list[Vertex] = []
-    #seen: set[Vertex] = set()
-    #traverse_start_to_treasure(initialpos, initialpos)
-    #return res, wall
+def path_recover_no_reverse(edges: list[Edge], v: Vertex) -> tuple[list[Vertex], int]:
+    bp: dict[Vertex, Vertex] = {}
+    counter=0
+    for o, d in edges:
+        bp[d] = o
+        if d == v:
+            break
+    path = [v]
+    while v != bp[v]:
+        v = bp[v]
+        path.append(v)
+        counter+=1
+    return path, counter
 
 
 def process(data: Data) -> Result:
-    # TODO: IMPLEMENTAR
     rows, cols, treasure, graph = data
     endpos = rows-1, cols-1
-    treasure_edges, treasurevertex = df_fromto(graph, treasure)
-    minlen=999999999999999999999999999
-    short_edges: list[Edge] = []
-    minwall: Edge
-    for wall in wall_list(graph, treasurevertex):
-        auxgraph=deepcopy(graph)
-        auxgraph.add_edge(wall)
-        start_to_treasure=df_fromto(auxgraph, (0, 0))[0]
-        if len(start_to_treasure) <= minlen:
-            minlen = len(start_to_treasure)
-            short_edges = start_to_treasure
-            minwall = wall
-    graph.add_edge(minwall)
-    finalpath=path_recover(short_edges, treasure)
-    for vertex in path_recover(treasure_edges, endpos):
-        finalpath.append(vertex)
-    finalpath.remove(treasure)
-    return finalpath, minwall
-
-
-
-    #raise NotImplementedError('process')  # Quitar
+    right_edges, rightvertex = bf_fromtoright(graph, treasure)
+    left_edges, distance_bin=bf_fromtoleft(graph, (0, 0), rightvertex)
+    therenomin = True
+    treasure_to_end = path_recover(right_edges, endpos)
+    for k in distance_bin:
+        n= distance_bin[k]
+        leftpath, leftlen=path_recover_no_reverse(left_edges, n)
+        rightpath, rightlen=path_recover_no_reverse(right_edges, k)
+        total_len=leftlen+rightlen
+        if therenomin or total_len < minlen:
+            minlen = total_len
+            therenomin = False
+            leftpathmin = leftpath
+            rightpathmin = rightpath
+            wall=(n, k)
+    leftpathmin.reverse()
+    treasure_to_end.remove(treasure)
+    for vertex in rightpathmin:
+        leftpathmin.append(vertex)
+    for vertex in treasure_to_end:
+        leftpathmin.append(vertex)
+    return leftpathmin, wall
 
 # ----- NO MODIFICAR EL PROGRAMA DEBAJO DE ESTA LÍNEA -----
 
