@@ -1,6 +1,6 @@
 from easypaint import EasyPaint
 import sys
-from e2 import Data, Result, process, read_data
+from e2pruea import Data, Result, process, read_data
 
 
 class TightRopeViewer(EasyPaint):

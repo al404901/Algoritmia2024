@@ -15,7 +15,7 @@ if sys.version_info < (3, 12):
     exit(1)
 # ==========================================================================================
 
-from e2 import read_data, process, Data, Result
+from e2pruea import read_data, process, Data, Result
 
 
 def show_exception(m: str, info):
