@@ -42,58 +42,42 @@ def process(data: Data) -> Result:
 
         def combine(self, solutions: Iterator[Result]) -> Result:
             c = (self.i + self.j) // 2
-            sumH=0
-            sumHMax=0
-            hValley=0
-            valleyPosFinal=None
-            leftBuilding = 0
-            rightBuilding = 0
-            maxBuildingPos=0
-            currentL=self.i
+            minHeightLeft=None
+            minHeightRight=None
             for pos in range(self.i, c):
-                if pos != self.i:
-                    if data[pos] < data[prev]:
-                        valleyCalc=data[prev]-data[pos]
-                        if valleyCalc > hValley:
-                            sumH+=valleyCalc
-                            hValley=valleyCalc
-                            valleyPos=pos
-                    elif data[pos] >= data[prev]:
-                        print(sumH, sumHMax, data[pos], data[prev], data[currentL])
-                        if sumH > sumHMax:
-                            sumHMax=sumH
-                            valleyPosFinal=valleyPos
-                            currentL = pos
-                        sumH=0
-                        hValley=0
-                prev=pos
-            sumH = 0
-            hValley = 0
-            for pos in range(c, self.j):
-                if pos != c:
-                    if data[pos] < data[prev]:
-                        valleyCalc=data[prev]-data[pos]
-                        if valleyCalc > hValley:
-                            sumH+=valleyCalc
-                            hValley=valleyCalc
-                            valleyPos=pos
-                    elif data[pos] >= data[prev]:
-                        print(sumH, sumHMax, data[pos], data[prev], data[currentL])
-                        if sumH > sumHMax:
-                            sumHMax=sumH
-                            valleyPosFinal=valleyPos
-                        sumH=0
-                        hValley=0
-
-                prev=pos
-                #print("Valle en posición {}, altura cable {}".format(valleyPosFinal, sumHMax))
-            for pos in range(valleyPosFinal-1, self.i-1, -1):
-                if data[pos]-data[valleyPosFinal]==sumHMax:
-                    leftBuilding=pos
-
+                if minHeightLeft is None or data[pos] < minHeightLeft[1] :
+                    minHeightLeft = pos, data[pos]
+            maxLeft = minHeightLeft[0]
+            leftBuilding = minHeightLeft[0]
+            for pos in range(minHeightLeft[0], c+1):
+                if data[pos]>data[maxLeft]:
+                    maxLeft=pos
+            for pos in range(minHeightLeft[0]-1, self.i-1, -1):
+                if data[pos]>data[maxLeft]:
                     break
-
-            print(leftBuilding, rightBuilding, valleyPosFinal, sumHMax)
+                if data[leftBuilding] < data[pos]:
+                    leftBuilding = pos
+            for pos in range(c, self.j):
+                if minHeightRight is None or data[pos] < minHeightRight[1] :
+                    minHeightRight = pos, data[pos]
+            maxRight = minHeightRight[0]
+            leftBuilding2=minHeightRight[0]
+            for pos in range(minHeightRight[0], self.j):
+                if data[pos]>data[maxRight]:
+                    maxRight=pos
+            for pos in range(minHeightRight[0]-1, c-1, -1):
+                if data[pos]>data[maxRight]:
+                    break
+                if data[leftBuilding2] < data[pos]:
+                    leftBuilding2=pos
+            cableHeight=data[leftBuilding]-minHeightLeft[1]
+            cableHeight2=data[leftBuilding2]-minHeightRight[1]
+            solution=None
+            if cableHeight<cableHeight2:
+                solution=leftBuilding2, maxRight, minHeightRight[0], cableHeight2
+            else:
+                solution=leftBuilding, maxLeft, minHeightLeft[0], cableHeight
+            return solution
     return div_solve(MaxValleyPoblem(0, len(data)))
 
 
